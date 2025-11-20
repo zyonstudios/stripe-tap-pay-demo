@@ -1,167 +1,233 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, Text, TextInput, Button, Alert, Platform } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
-  StripeTerminalProvider,
-  useStripeTerminal,
-  requestNeededAndroidPermissions,  
-} from "@stripe/stripe-terminal-react-native";
+  Alert,
+  Button,
+  Text,
+  TextInput,
+  View,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { TextStyle } from "react-native";
 
-const BACKEND_URL = "https://cafe.joelsa.co.uk/taptopay";
-
-export default function Index() {
-  const fetchConnectionToken = async (): Promise<string> => {
-    const response = await fetch(`${BACKEND_URL}/connection_token.php`, { method: "POST" });
-    const data = await response.json();
-    return data.secret;
-  };
-
-  return (
-    <StripeTerminalProvider tokenProvider={fetchConnectionToken} logLevel="verbose">
-      <PaymentScreen />
-    </StripeTerminalProvider>
-  );
-}
-
-function PaymentScreen() {
-  const [showInput, setShowInput] = useState(false);
-  const [amount, setAmount] = useState("");
- const [connectedReader, setConnectedReader] = useState<any>(null);
-const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
-
-// 👇 Add "as any" here to bypass incomplete Stripe typings
-const {
-  initialize,
-  discoverReaders,
-  connectReader,
-  collectPaymentMethod,
-  processPayment,
-} = useStripeTerminal({
-  onUpdateDiscoveredReaders: (readers) => {
-    console.log("Discovered readers:", readers);
-    setDiscoveredReaders(readers);
-  },
-  onDidDisconnect: () => {
-    Alert.alert("Reader disconnected", "Please reconnect before accepting payments.");
-    setConnectedReader(null);
-  },
-}) as any;
+const cardTitle: TextStyle = {
+  fontSize: 20,
+  fontWeight: "600",
+  marginBottom: 6,
+};
 
 
-  // --- Request permissions + Initialize SDK ---
+
+const BACKEND_URL = "https://joelsapos.com/taptopay";
+
+export default function HomeScreen() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checkingLogin, setCheckingLogin] = useState(true);
+  const navigation = useNavigation();
+
+
+  // Logged-in merchant state
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+
+  // 👉 ADD GEAR ICON IN HEADER
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={{ marginRight: 15 }}
+          onPress={() => router.push("/settings")}
+        >
+          <Ionicons name="settings-outline" size={26} color="black" />
+        </TouchableOpacity>
+      ),
+      title: "TapToPay",
+    });
+  }, []);
+
+  // Load logged-in state
   useEffect(() => {
-    async function setup() {
-      if (Platform.OS === "android") {
-        await requestNeededAndroidPermissions({
-          accessFineLocation: {
-            title: "Location Permission",
-            message: "Stripe Terminal needs access to your location",
-            buttonPositive: "Accept",
-          },
-        });
-      }
-      const { error } = await initialize();
-      if (error) Alert.alert("Stripe Init Error", error.message);
-      else console.log("✅ Stripe Terminal initialized");
+    async function load() {
+      const storedId = await AsyncStorage.getItem("merchant_id");
+      console.log("📌 Merchant ID from storage:", storedId);
+      setMerchantId(storedId);
+      setCheckingLogin(false);
     }
-    setup();
-  }, [initialize]);
+    load();
+  }, []);
 
-  // --- Discover Tap-to-Pay Readers ---
-  const handleDiscoverReaders = async () => {
-    const { error } = await discoverReaders({ discoveryMethod: "tapToPay" });
-    if (error) Alert.alert("Discovery Error", error.message);
-  };
+  // -------------------------------
+  // CREATE ACCOUNT HANDLER
+  // -------------------------------
+  const handleSignup = async () => {
+    if (loading) return; // prevent multi-click
+    setLoading(true);
 
-  // --- Connect to the first discovered reader ---
-  const handleConnectReader = async () => {
-    if (discoveredReaders.length === 0) {
-      Alert.alert("No readers found", "Try discovering readers first.");
+    if (!email.includes("@")) {
+      Alert.alert("Invalid email");
+      setLoading(false);
       return;
     }
-    const selected = discoveredReaders[0];
-    const { reader, error } = await connectReader(
-      { reader: selected, locationId: "{{tml_GQKD2ABQvBK5zA}}", autoReconnectOnUnexpectedDisconnect: true },
-      "tapToPay"
-    );
-    if (error) Alert.alert("Connection Error", error.message);
-    else {
-      Alert.alert("✅ Reader Connected", `Connected to ${reader.label || reader.serialNumber}`);
-      setConnectedReader(reader);
-    }
-  };
 
-  // --- Payment flow ---
-  const handleContinue = async () => {
     try {
-      if (!connectedReader) {
-        Alert.alert("No reader connected", "Connect to a reader first.");
+      const res = await fetch(`${BACKEND_URL}/create_connect_account.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        Alert.alert("Signup Error", data.error);
+        setLoading(false);
         return;
       }
-      const amountInCents = Math.round(parseFloat(amount) * 100);
 
-      // 1️⃣ Create PaymentIntent
-      const res = await fetch(`${BACKEND_URL}/create_payment_intent.php`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amountInCents, currency: "gbp" }),
-      });
-      const { client_secret } = await res.json();
+      // Save to local storage
+      await AsyncStorage.setItem("merchant_id", data.merchant_id);
+      await AsyncStorage.setItem("stripe_account_id", data.account_id);
+      await AsyncStorage.setItem("onboarding_complete", "false");
 
-      // 2️⃣ Collect and process payment
-      const collectResult = await collectPaymentMethod(client_secret);
-      if (collectResult.error) throw new Error(collectResult.error.message);
-      const processResult = await processPayment(collectResult.paymentIntentId);
-      if (processResult.error) throw new Error(processResult.error.message);
-
-      // 3️⃣ Capture the payment
-      await fetch(`${BACKEND_URL}/capture_payment_intent.php`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payment_intent_id: collectResult.paymentIntentId }),
-      });
-
-      Alert.alert("✅ Payment Successful", `£${amount} captured successfully!`);
-      setAmount("");
-      setShowInput(false);
-    } catch (err: any) {
-      Alert.alert("❌ Payment Failed", err.message ?? "Something went wrong");
+      router.replace("/onboard");
+    } catch (e) {
+      Alert.alert("Error", "Something went wrong.");
     }
+
+    setLoading(false);
   };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Stripe Tap-to-Pay Demo</Text>
+  // -------------------------------
+  // LOGGED-IN UI (DASHBOARD)
+  // -------------------------------
+  const LoggedInDashboard = () => (
+    <View style={{ flex: 1, padding: 20 }}>
+            {/* TapToPay Logo */}
+      <View style={{ alignItems: "center", marginBottom: 25 }}>
+        <Image
+          source={require("../../assets/taptopay.png")}
+          style={{
+            width: "40%",
+            height: undefined,
+            aspectRatio: 1, // keeps it square
+          }}
+          resizeMode="contain"
+        />
+      </View>
 
-      {!connectedReader ? (
-        <View>
-          <Button title="Discover Readers" onPress={handleDiscoverReaders} />
-          {discoveredReaders.length > 0 && (
-            <Button title="Connect to Reader" onPress={handleConnectReader} />
-          )}
-        </View>
-      ) : !showInput ? (
-        <Button title="Pay Now" onPress={() => setShowInput(true)} />
-      ) : (
-        <View style={styles.paymentBox}>
-          <Text style={styles.label}>Enter Amount (£)</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="numeric"
-            placeholder="10.00"
-            value={amount}
-            onChangeText={setAmount}
-          />
-          <Button title="Continue to Payment" onPress={handleContinue} />
-        </View>
-      )}
+      {/* Navigation buttons */}
+      <View>
+        {/* Payments */}
+        <TouchableOpacity
+          onPress={() => router.push("/payments")}
+          style={cardStyle}
+        >
+          <Text style={cardTitle}>Payments</Text>
+          <Text style={cardDesc}>View customer payments & refunds</Text>
+        </TouchableOpacity>
+
+        {/* Charge Screen */}
+        <TouchableOpacity
+          onPress={() => router.push("/charge")}
+          style={cardStyle}
+        >
+          <Text style={cardTitle}>Charge Customer</Text>
+          <Text style={cardDesc}>Tap-to-Pay instant card charge</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
+
+  // -------------------------------
+  // LOGGED OUT UI (SIGNUP SCREEN)
+  // -------------------------------
+  const SignupUI = () => (
+    <View style={{ flex: 1, padding: 20, justifyContent: "center" }}>
+      <View style={{ alignItems: "center", marginBottom: 40 }}>
+        <Image
+          source={{
+            uri: "https://cdn-icons-png.flaticon.com/512/891/891407.png",
+          }}
+          style={{ width: 100, height: 100, marginBottom: 15 }}
+        />
+        <Text style={{ fontSize: 30, fontWeight: "700" }}>TapToPay</Text>
+      </View>
+
+      <Text style={{ fontSize: 22, fontWeight: "600", marginBottom: 20, textAlign: "center" }}>
+        Create your account
+      </Text>
+      
+
+      <TextInput
+        placeholder="Your Email"
+        value={email}
+        onChangeText={setEmail}
+        style={{
+          borderWidth: 1,
+          borderColor: "#D1D5DB",
+          padding: 12,
+          borderRadius: 10,
+          fontSize: 16,
+          marginBottom: 20,
+        }}
+        autoCapitalize="none"
+      />
+
+      <TouchableOpacity
+        disabled={loading}
+        onPress={handleSignup}
+        style={{
+          backgroundColor: loading ? "#9CA3AF" : "#111827",
+          paddingVertical: 14,
+          borderRadius: 10,
+          alignItems: "center",
+        }}
+      >
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={{ color: "#ffffff", fontSize: 16, fontWeight: "600" }}>
+            Continue
+          </Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
+  // -------------------------------
+  // MAIN RENDER
+  // -------------------------------
+  if (checkingLogin) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return merchantId ? <LoggedInDashboard /> : <SignupUI />;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 16, backgroundColor: "#f8f8f8" },
-  header: { fontSize: 20, fontWeight: "600", marginBottom: 20 },
-  paymentBox: { backgroundColor: "#fff", padding: 20, borderRadius: 12, width: "80%", elevation: 3 },
-  label: { fontSize: 16, marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 10, marginBottom: 15, fontSize: 16 },
-});
+// -------------------------------
+// STYLES
+// -------------------------------
+const cardStyle = {
+  backgroundColor: "#F3F4F6",
+  padding: 20,
+  borderRadius: 15,
+  marginBottom: 20,
+};
+
+
+
+const cardDesc = {
+  fontSize: 14,
+  color: "#6B7280",
+};

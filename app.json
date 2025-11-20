@@ -1,31 +1,39 @@
 {
   "expo": {
-    "name": "stripe-tap-pay-demo",
-    "slug": "stripe-tap-pay-demo",
-    "version": "1.0.0",
+    "name": "TapToPay",
+    "slug": "taptopay",
+    "version": "1.0.2",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
     "scheme": "stripetappaydemo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
+    "icon": "./assets/icon.png",
+
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "bundleIdentifier": "com.joelsa.stripetappaydemo",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Bluetooth is used to connect to payment readers.",
         "NSBluetoothPeripheralUsageDescription": "Bluetooth is used to connect to payment readers.",
         "NSLocationWhenInUseUsageDescription": "Location is used to discover nearby readers."
       }
     },
+
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "package": "com.joelsa.stripetappaydemo",
+
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+
       "permissions": [
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",
@@ -33,35 +41,22 @@
         "NFC"
       ]
     },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-   "plugins": [
-  "expo-router",
-  [
-    "expo-splash-screen",
-    {
-      "image": "./assets/images/splash-icon.png",
-      "imageWidth": 200,
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff",
-      "dark": {
-        "backgroundColor": "#000000"
-      }
-    }
-  ],
-  [
-    "@stripe/stripe-terminal-react-native",
-    {
-      "bluetoothBackgroundMode": true,
-      "locationWhenInUsePermission": "Location access is required to accept payments.",
-      "bluetoothPeripheralPermission": "Bluetooth access is required to connect to supported Bluetooth card readers.",
-      "bluetoothAlwaysUsagePermission": "This app uses Bluetooth to connect to supported card readers."
-    }
-  ]
-]
-,
+
+    "plugins": [
+      "expo-router",
+      [
+        "@stripe/stripe-terminal-react-native",
+        {
+          "bluetoothBackgroundMode": true,
+          "locationWhenInUsePermission": "Location access is required to accept payments.",
+          "bluetoothPeripheralPermission": "Bluetooth access is required to connect to card readers.",
+          "bluetoothAlwaysUsagePermission": "Bluetooth is required to maintain connection to readers."
+        }
+      ]
+    ],
+
+    "assetsBundlePatterns": ["**/*"],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
