@@ -9,7 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Bluetooth is used to connect to payment readers.",
+        "NSBluetoothPeripheralUsageDescription": "Bluetooth is used to connect to payment readers.",
+        "NSLocationWhenInUseUsageDescription": "Location is used to discover nearby readers."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,27 +24,44 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.joelsa.stripetappaydemo",
+      "permissions": [
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "ACCESS_FINE_LOCATION",
+        "NFC"
+      ]
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ]
-    ],
+   "plugins": [
+  "expo-router",
+  [
+    "expo-splash-screen",
+    {
+      "image": "./assets/images/splash-icon.png",
+      "imageWidth": 200,
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff",
+      "dark": {
+        "backgroundColor": "#000000"
+      }
+    }
+  ],
+  [
+    "@stripe/stripe-terminal-react-native",
+    {
+      "bluetoothBackgroundMode": true,
+      "locationWhenInUsePermission": "Location access is required to accept payments.",
+      "bluetoothPeripheralPermission": "Bluetooth access is required to connect to supported Bluetooth card readers.",
+      "bluetoothAlwaysUsagePermission": "This app uses Bluetooth to connect to supported card readers."
+    }
+  ]
+]
+,
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

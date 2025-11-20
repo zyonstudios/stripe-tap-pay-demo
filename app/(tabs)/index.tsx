@@ -1,98 +1,167 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from "react";
+import { StyleSheet, View, Text, TextInput, Button, Alert, Platform } from "react-native";
+import {
+  StripeTerminalProvider,
+  useStripeTerminal,
+  requestNeededAndroidPermissions,  
+} from "@stripe/stripe-terminal-react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const BACKEND_URL = "https://cafe.joelsa.co.uk/taptopay";
 
-export default function HomeScreen() {
+export default function Index() {
+  const fetchConnectionToken = async (): Promise<string> => {
+    const response = await fetch(`${BACKEND_URL}/connection_token.php`, { method: "POST" });
+    const data = await response.json();
+    return data.secret;
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <StripeTerminalProvider tokenProvider={fetchConnectionToken} logLevel="verbose">
+      <PaymentScreen />
+    </StripeTerminalProvider>
+  );
+}
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+function PaymentScreen() {
+  const [showInput, setShowInput] = useState(false);
+  const [amount, setAmount] = useState("");
+ const [connectedReader, setConnectedReader] = useState<any>(null);
+const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
+
+// 👇 Add "as any" here to bypass incomplete Stripe typings
+const {
+  initialize,
+  discoverReaders,
+  connectReader,
+  collectPaymentMethod,
+  processPayment,
+} = useStripeTerminal({
+  onUpdateDiscoveredReaders: (readers) => {
+    console.log("Discovered readers:", readers);
+    setDiscoveredReaders(readers);
+  },
+  onDidDisconnect: () => {
+    Alert.alert("Reader disconnected", "Please reconnect before accepting payments.");
+    setConnectedReader(null);
+  },
+}) as any;
+
+
+  // --- Request permissions + Initialize SDK ---
+  useEffect(() => {
+    async function setup() {
+      if (Platform.OS === "android") {
+        await requestNeededAndroidPermissions({
+          accessFineLocation: {
+            title: "Location Permission",
+            message: "Stripe Terminal needs access to your location",
+            buttonPositive: "Accept",
+          },
+        });
+      }
+      const { error } = await initialize();
+      if (error) Alert.alert("Stripe Init Error", error.message);
+      else console.log("✅ Stripe Terminal initialized");
+    }
+    setup();
+  }, [initialize]);
+
+  // --- Discover Tap-to-Pay Readers ---
+  const handleDiscoverReaders = async () => {
+    const { error } = await discoverReaders({ discoveryMethod: "tapToPay" });
+    if (error) Alert.alert("Discovery Error", error.message);
+  };
+
+  // --- Connect to the first discovered reader ---
+  const handleConnectReader = async () => {
+    if (discoveredReaders.length === 0) {
+      Alert.alert("No readers found", "Try discovering readers first.");
+      return;
+    }
+    const selected = discoveredReaders[0];
+    const { reader, error } = await connectReader(
+      { reader: selected, locationId: "{{tml_GQKD2ABQvBK5zA}}", autoReconnectOnUnexpectedDisconnect: true },
+      "tapToPay"
+    );
+    if (error) Alert.alert("Connection Error", error.message);
+    else {
+      Alert.alert("✅ Reader Connected", `Connected to ${reader.label || reader.serialNumber}`);
+      setConnectedReader(reader);
+    }
+  };
+
+  // --- Payment flow ---
+  const handleContinue = async () => {
+    try {
+      if (!connectedReader) {
+        Alert.alert("No reader connected", "Connect to a reader first.");
+        return;
+      }
+      const amountInCents = Math.round(parseFloat(amount) * 100);
+
+      // 1️⃣ Create PaymentIntent
+      const res = await fetch(`${BACKEND_URL}/create_payment_intent.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amountInCents, currency: "gbp" }),
+      });
+      const { client_secret } = await res.json();
+
+      // 2️⃣ Collect and process payment
+      const collectResult = await collectPaymentMethod(client_secret);
+      if (collectResult.error) throw new Error(collectResult.error.message);
+      const processResult = await processPayment(collectResult.paymentIntentId);
+      if (processResult.error) throw new Error(processResult.error.message);
+
+      // 3️⃣ Capture the payment
+      await fetch(`${BACKEND_URL}/capture_payment_intent.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_intent_id: collectResult.paymentIntentId }),
+      });
+
+      Alert.alert("✅ Payment Successful", `£${amount} captured successfully!`);
+      setAmount("");
+      setShowInput(false);
+    } catch (err: any) {
+      Alert.alert("❌ Payment Failed", err.message ?? "Something went wrong");
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.header}>Stripe Tap-to-Pay Demo</Text>
+
+      {!connectedReader ? (
+        <View>
+          <Button title="Discover Readers" onPress={handleDiscoverReaders} />
+          {discoveredReaders.length > 0 && (
+            <Button title="Connect to Reader" onPress={handleConnectReader} />
+          )}
+        </View>
+      ) : !showInput ? (
+        <Button title="Pay Now" onPress={() => setShowInput(true)} />
+      ) : (
+        <View style={styles.paymentBox}>
+          <Text style={styles.label}>Enter Amount (£)</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            placeholder="10.00"
+            value={amount}
+            onChangeText={setAmount}
+          />
+          <Button title="Continue to Payment" onPress={handleContinue} />
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 16, backgroundColor: "#f8f8f8" },
+  header: { fontSize: 20, fontWeight: "600", marginBottom: 20 },
+  paymentBox: { backgroundColor: "#fff", padding: 20, borderRadius: 12, width: "80%", elevation: 3 },
+  label: { fontSize: 16, marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 10, marginBottom: 15, fontSize: 16 },
 });
