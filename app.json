@@ -1,21 +1,18 @@
 {
   "expo": {
-    "name": "TapToPay",
+    "name": "Tap To Pay",
     "slug": "taptopay",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "scheme": "stripetappaydemo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "icon": "./assets/icon.png",
-
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.joelsa.stripetappaydemo",
@@ -25,15 +22,14 @@
         "NSLocationWhenInUseUsageDescription": "Location is used to discover nearby readers."
       }
     },
-
     "android": {
       "package": "com.joelsa.stripetappaydemo",
-
+      "versionCode": 3,
+      "minSdkVersion": 26,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-
       "permissions": [
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",
@@ -41,7 +37,6 @@
         "NFC"
       ]
     },
-
     "plugins": [
       "expo-router",
       [
@@ -54,12 +49,18 @@
         }
       ]
     ],
-
-    "assetsBundlePatterns": ["**/*"],
-
+    "assetsBundlePatterns": [
+      "**/*"
+    ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e332b49d-14c0-4899-83d1-9ad4f4af6a3d"
+      }
     }
   }
 }

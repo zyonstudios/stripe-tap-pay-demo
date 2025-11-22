@@ -93,7 +93,7 @@ export default function PinLogin() {
       {/* Info Text */}
       <Text style={{ marginTop: 30, color: "#6B7280", textAlign: "center" }}>
         If your PIN does not work even when correct, you may need to clear cache
-        and log in again with your email.
+        first and Close the app,then reopen login with your email and pin again.
       </Text>
 
       {/* Clear Cache Button */}

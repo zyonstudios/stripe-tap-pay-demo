@@ -22,6 +22,9 @@ const BACKEND_URL = "https://joelsapos.com/taptopay";
 
 export default function OnboardScreen() {
   const router = useRouter();
+  const [supported, setSupported] = useState<boolean | undefined>(undefined);
+  const [stripeCountry, setStripeCountry] = useState<string>("Unknown");
+
 
   const [merchantId, setMerchantId] = useState<string | null>(null);
 
@@ -52,10 +55,16 @@ export default function OnboardScreen() {
         setMerchantId(id);
         if (id) checkStatus(id);
 
+        const locales = Localization.getLocales() as any[];
+
         const deviceCountry =
-          Localization.region?.toUpperCase() ??
-          Localization.locale?.split("-")[1]?.toUpperCase() ??
+          locales?.[0]?.region ??
+          locales?.[0]?.countryCode ??
           "GB";
+
+
+        setCountry(deviceCountry);
+
 
         setCountry(deviceCountry); // autofill
 
@@ -81,6 +90,10 @@ export default function OnboardScreen() {
 
       const completed = data.onboarding_complete === true;
       setOnboardingComplete(completed);
+
+      setSupported(data.supported);
+      setStripeCountry(data.stripe_country);
+
 
       if (completed) {
         await AsyncStorage.setItem("onboarding_complete", "true");
@@ -171,9 +184,38 @@ export default function OnboardScreen() {
 
     await AsyncStorage.setItem("terminal_location_id", data.location_id);
     setTerminalLocationId(data.location_id);
-
+    setNeedsLocation(false);
     setShowLocationSuccess(true); // show success screen
   };
+
+  // ----------------------------------------------------
+  // SHOW UNSUPPORTED COUNTRY UI
+  // ----------------------------------------------------
+  if (onboardingComplete === false && merchantId && typeof supported !== "undefined" && supported === false) {
+    return (
+      <View style={styles.centerScreen}>
+        <Ionicons name="alert-circle" size={90} color="#DC2626" />
+
+        <Text style={styles.bigTitle}>Tap-to-Pay Not Available</Text>
+
+        <Text style={styles.infoText}>
+          Tap-to-Pay is not yet supported in your country.
+        </Text>
+
+        <Text style={[styles.infoText, { marginTop: 10, fontWeight: "700" }]}>
+          Country: {stripeCountry}
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => router.replace("/")}
+          style={[styles.primaryButton, { backgroundColor: "#DC2626" }]}
+        >
+          <Text style={styles.primaryButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
 
   // ----------------------------------------------------
   // SHOW “ONBOARDING COMPLETE” (NO LOCATION YET)
@@ -189,11 +231,15 @@ export default function OnboardScreen() {
         </Text>
 
         <TouchableOpacity
-          onPress={() => setNeedsLocation(true)}
+          onPress={() => {
+            setNeedsLocation(true);
+            setShowSuccess(false);
+          }}
           style={styles.primaryButton}
         >
           <Text style={styles.primaryButtonText}>Register Location</Text>
         </TouchableOpacity>
+
       </View>
     );
   }
@@ -307,13 +353,35 @@ export default function OnboardScreen() {
 
             <ScrollView style={{ padding: 20 }}>
               <Text style={styles.modalTitle}>How Stripe Onboarding Works</Text>
+
               <Text style={styles.modalText}>
                 Stripe onboarding connects your business so you can receive Tap-to-Pay payments.
               </Text>
+
               <Text style={styles.modalText}>
-                You’ll verify identity, business details, and connect your bank account.
+                During onboarding, Stripe will ask you to verify your identity, provide business
+                details, and connect a bank account for payouts.
+              </Text>
+
+              <Text style={styles.modalText}>
+                Stripe may also require a business website or online presence. A traditional website
+                is NOT required. If you do not have one, you can enter any public link that shows
+                your business or activity, such as:
+                {"\n"}• Your Facebook page
+                {"\n"}• Your Instagram business profile
+                {"\n"}• Your Google Business Profile
+                {"\n"}• A TikTok or YouTube account
+                {"\n"}• Your QR menu link or ordering page
+                {"\n"}• Or any link that represents your business (even facebook.com or instagram.com is acceptable)
+              </Text>
+
+              <Text style={styles.modalText}>
+                Stripe requires that the website field is NOT left blank, so you must enter some
+                type of online presence link. You will also be asked for a short business description
+                explaining what you sell or what services you provide.
               </Text>
             </ScrollView>
+
           </View>
         </View>
       </Modal>

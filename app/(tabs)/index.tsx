@@ -219,7 +219,7 @@ export default function HomeScreen() {
 // STYLES
 // -------------------------------
 const cardStyle = {
-  backgroundColor: "#F3F4F6",
+  backgroundColor: "#f5d20bff",
   padding: 20,
   borderRadius: 15,
   marginBottom: 20,
