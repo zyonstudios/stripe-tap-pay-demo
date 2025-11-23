@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tap To Pay",
     "slug": "taptopay",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "scheme": "stripetappaydemo",
     "userInterfaceStyle": "automatic",
@@ -38,7 +38,6 @@
       ]
     },
     "plugins": [
-      "./app.plugin.js",
       "expo-router",
       [
         "@stripe/stripe-terminal-react-native",
