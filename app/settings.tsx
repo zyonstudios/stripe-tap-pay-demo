@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
-const BACKEND_URL = "https://joelsapos.com/taptopay";
+const BACKEND_URL = "";
 
 // Currency options user is allowed to change
 const CURRENCIES = ["GBP", "USD", "EUR", "CAD", "AUD", "SGD"];
