@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, Button, Text, TextInput, View, Image } from "react-native";
 
-const BACKEND_URL = "https://joelsapos.com/taptopay";
+const BACKEND_URL = "";
 
 export default function SignupScreen() {
   const router = useRouter();
