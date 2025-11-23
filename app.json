@@ -25,7 +25,7 @@
     "android": {
       "package": "com.joelsa.stripetappaydemo",
       "versionCode": 3,
-      "minSdk": 26,
+      "minSdkVersion": 26,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
