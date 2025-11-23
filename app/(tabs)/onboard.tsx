@@ -18,7 +18,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 
-const BACKEND_URL = "https://joelsapos.com/taptopay";
+const BACKEND_URL = "";
 
 export default function OnboardScreen() {
   const router = useRouter();
