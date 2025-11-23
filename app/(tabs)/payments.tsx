@@ -11,7 +11,7 @@ import {
     View,
 } from "react-native";
 
-const BACKEND_URL = "https://joelsapos.com/taptopay";
+const BACKEND_URL = "";
 
 type RangeFilter = "today" | "week" | "month" | "all";
 
