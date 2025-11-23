@@ -23,7 +23,7 @@ const cardTitle: TextStyle = {
 
 
 
-const BACKEND_URL = "https://joelsapos.com/taptopay";
+const BACKEND_URL = "";
 
 export default function HomeScreen() {
   const router = useRouter();
