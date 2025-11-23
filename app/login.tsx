@@ -3,7 +3,7 @@ import { View, Text, TextInput, Button, Alert, Image } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const BACKEND_URL = "https://joelsapos.com/taptopay";
+const BACKEND_URL = "";
 
 export default function LoginScreen() {
   const router = useRouter();
