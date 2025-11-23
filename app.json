@@ -38,7 +38,7 @@
       ]
     },
     "plugins": [
-       "./app.plugin.js",
+      "./app.plugin.js",
       "expo-router",
       [
         "@stripe/stripe-terminal-react-native",
