@@ -20,7 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { blue } from "react-native-reanimated/lib/typescript/Colors";
 
-const BACKEND_URL = "https://joelsapos.com/taptopay";
+const BACKEND_URL = "";
 
 export default function ChargePage() {
   const router = useRouter();
